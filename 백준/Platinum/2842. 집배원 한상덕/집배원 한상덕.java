@@ -3,108 +3,121 @@ import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.util.ArrayDeque;
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
-
+import java.util.StringTokenizer;
+import java.util.TreeSet;
 
 public class Main {
-    static int n;
-    static char[][] map;
-    static int[][] height;
-    static boolean[][] visited;
-    static int min = 1000000;
-    static int K = 0;
-    static int[] dx = {-1,1,0,0,-1,1,-1,1};
-    static int[] dy = {0,0,-1,1,1,1,-1,-1};
-    static int startRow=0;
-    static int startColumn=0;
-
-    public static void main(String[] args) throws IOException {
-        BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
-        n = Integer.parseInt(br.readLine());
-        map = new char[n][n];
-        height = new int[n][n];
-        
-        Set<Integer> allHeight = new HashSet<>();
-        
-        for(int i=0;i<n;i++) {
-            String line = br.readLine();
-            for(int j=0;j<n;j++) {
-                map[i][j]= line.charAt(j);
-                if(map[i][j]=='P') {
-                    startRow = i;
-                    startColumn = j;         
-                }else if(map[i][j]=='K'){
-                    K++;
-                }
-            }
-        
+	
+	static int N, homeNum=0;
+	static char[][] home;
+	static int[][] tired;
+	static int min = Integer.MAX_VALUE;
+	static Queue<int[]> queue;
+	static int px=0,py=0;
+	static int minHeight=1000000,maxHeight=0;
+	static int[] dx = {0,0,1,-1,1,1,-1,-1};
+	static int[] dy = {1,-1,0,0,1,-1,1,-1};
+	static Set<Integer> heightSet;
+	static boolean[][] visited;
+	
+	public static void main(String[] args) throws IOException {
+		BufferedReader br = new BufferedReader(new InputStreamReader(System.in));
+		BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(System.out));
+		StringTokenizer st;
+		N = Integer.parseInt(br.readLine());
+		queue = new LinkedList<>(); // 우선 순위 큐로 했을 떄 차이점
+		//queue = new PriorityQueue<>();
+		heightSet = new TreeSet<>();
+		home = new char[N][N];
+		tired = new int[N][N];
+		
+		for(int i=0;i<N;i++) {
+			String line = br.readLine();
+			for(int j=0;j<N;j++) {
+				home[i][j] = line.charAt(j);
+				if(home[i][j]=='P') {
+					px = i;
+					py = j;
+				}
+			}
+		}
+		for(int i=0;i<N;i++) {
+			st = new StringTokenizer(br.readLine());
+			for(int j=0;j<N;j++) {
+				tired[i][j] = Integer.parseInt(st.nextToken());	
+				heightSet.add(tired[i][j]);
+				
+				if(home[i][j]=='K') {
+					homeNum++;
+					if(tired[i][j]<minHeight)
+						minHeight = tired[i][j];
+					if(tired[i][j]>maxHeight)
+						maxHeight = tired[i][j];
+				}
+				if(home[i][j]=='P') {
+					if(tired[i][j]<minHeight)
+						minHeight = tired[i][j];
+					if(tired[i][j]>maxHeight)
+						maxHeight = tired[i][j];
+				}
+			}
+		}
+		
+		Integer[] hArray = new Integer[heightSet.size()];
+        heightSet.toArray(hArray);
+        int rightIndex = 0;
+        for(int i=0;i<heightSet.size();i++) {
+        	if(maxHeight==hArray[i])
+        		rightIndex= i;
         }
         
-        for(int i=0;i<n;i++) {
-            String[] line = br.readLine().split(" ");
-            for(int j=0;j<n;j++){
-                height[i][j]= Integer.parseInt(line[j]);        
-                allHeight.add(height[i][j]);
-            }
-        }
         
-        int size = allHeight.size();
-        int[] arrayHeight = allHeight.stream().mapToInt(Integer::intValue).toArray();
-        Arrays.sort(arrayHeight);
-        int rightIndex =0;
-        
-        for(int i=0;i<size;i++) {
-        	while(rightIndex<size && !bfs(map,height,arrayHeight[i],arrayHeight[rightIndex])) {	
-        		rightIndex++;
+        for(int i=0;i<heightSet.size();i++) {
+        	while(rightIndex<heightSet.size()) {
+        		
+        		if(travel(hArray[i],hArray[rightIndex])) {
+        			min = Math.min(min, hArray[rightIndex]-hArray[i]);
+        			break;
+        		}else {
+        			
+        			rightIndex++;
+        		}
         	}
-        	if(rightIndex==size)
-        		break;
-        	min = Math.min(min,arrayHeight[rightIndex]-arrayHeight[i]);
-        }
-        
-        System.out.println(min);
-
-    }
-    public static boolean bfs(char[][] map, int[][] height, int minHeight, int maxHeight){
-        int N = map.length;
-        int visit =0;
-        boolean[][] visited = new boolean[N][N];
-        visited[startRow][startColumn]=true;
-        if(height[startRow][startColumn]<minHeight || height[startRow][startColumn]>maxHeight)
-        	return false;
-        
-        Queue<int[]> goNow = new ArrayDeque<>();
-        goNow.add(new int[]{startRow,startColumn});
-
-        while(!goNow.isEmpty()){
-            int len = goNow.size();
-            for(int i=0;i<len;i++){
-                int[] t = goNow.poll();
-                int x = t[0];
-                int y = t[1];
-                for(int j=0;j<8;j++){
-                    int nx = x+dx[j];
-                    int ny = y+dy[j];
-
-                    if(nx>=0 && nx<map.length && ny>=0 && ny< map.length && visited[nx][ny]==false){
-                        if(height[nx][ny]>=minHeight && height[nx][ny]<=maxHeight){
-                            goNow.add(new int[]{nx,ny});
-                            visited[nx][ny]=true;
-                            if(map[nx][ny]=='K'){
-                                visit++;
-                            }
-                        }
-                    }
-                }
-            }
-            if(visit==K)
-                return true;
-        }
-        return false;
-    }
+        }   
+		System.out.println(min);
+	}
+	
+	//minHeight, maxHeight 가 주어졌을때 가능한지
+	public static boolean travel(int min, int max) {
+		queue.add(new int[] {px,py});
+		visited = new boolean[N][N];
+		visited[px][py] = true;
+		int visitHome =0;
+        if(tired[px][py]<min || tired[px][py]>max)
+			return false;
+		
+		while(!queue.isEmpty()) {
+			int[] t = queue.poll();
+			for(int i=0;i<8;i++) {
+				int nx = t[0]+dx[i];
+				int ny = t[1]+dy[i];
+				if(nx>=0 && ny>=0 && nx<N && ny<N && !visited[nx][ny] && tired[nx][ny]>=min && tired[nx][ny]<=max) {
+					visited[nx][ny]= true;
+					queue.add(new int[] {nx,ny});
+					if(home[nx][ny]=='K') {
+						visitHome++;
+					}
+				}
+			}
+		}
+		
+		if(visitHome==homeNum) {
+			return true;
+		}
+		return false;
+	}
+	 
 }
